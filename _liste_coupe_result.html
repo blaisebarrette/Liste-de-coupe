@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Courier New',monospace;font-size:13px;
+       padding:10px;background:#2b2b2b;color:#e8e8e8}
+  #toolbar{position:sticky;top:0;z-index:10;background:#2b2b2b;
+            padding:6px 0 10px;border-bottom:1px solid #444;
+            margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .btn{background:#3a7bd5;color:#fff;border:none;padding:5px 14px;
+        font-size:12px;border-radius:4px;cursor:pointer;font-family:sans-serif}
+  .btn:hover{background:#2a6bc5}
+  .btn-warn{background:#8b2020}
+  .btn-warn:hover{background:#b02828}
+  .btn-tab{background:#3a3a3a;color:#bbb}
+  .btn-tab:hover{background:#4a4a4a;color:#fff}
+  .btn-tab.active{background:#3a7bd5;color:#fff}
+  .tab-sep{width:1px;height:20px;background:#555;margin:0 4px}
+  #summary{font-family:sans-serif;font-size:12px;color:#999;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse}
+  .sec-hdr td{background:#1e1e1e;color:#f0a040;font-weight:bold;
+               padding:8px 6px 3px;font-family:sans-serif;font-size:13px;
+               border-top:2px solid #555}
+  .sec-mat-sum{float:right;color:#aaffaa;font-size:11px;font-weight:normal;white-space:nowrap;padding-left:12px}
+  .col-hdr th{background:#303030;color:#888;font-family:sans-serif;
+               font-size:11px;font-weight:normal;padding:3px 6px;
+               text-align:left;border-bottom:1px solid #3a3a3a}
+  .cut-row{cursor:pointer;transition:background .1s}
+  .cut-row:hover{background:#363636}
+  .cut-row.active{background:#1a3a70}
+  .cut-row.done td:not(.cb-cell){opacity:.4}
+  .cut-row.hidden-row{display:none}
+  .cut-row td{padding:3px 6px;vertical-align:middle;border-bottom:1px solid #2e2e2e}
+  .cb-cell{width:28px;text-align:center}
+  .qty{width:44px;text-align:right;padding-right:10px;color:#99ccff}
+  .len{width:120px;color:#ffcc88}
+  .note{color:#cccccc}
+  input[type=checkbox]{cursor:pointer;accent-color:#5a9fd4}
+  /* ── Matériaux ── */
+  .mat-sec-hdr{background:#1e1e1e;color:#f0a040;font-weight:bold;
+                padding:8px 6px 3px;font-family:sans-serif;font-size:13px;
+                border-top:2px solid #555;margin-top:4px;
+                cursor:pointer;display:flex;align-items:baseline;gap:10px;user-select:none}
+  .mat-sec-hdr:hover{background:#252525}
+  .mat-sec-count{color:#aaffaa;font-weight:normal;font-size:11px}
+  .mat-sec-arrow{margin-left:auto;color:#888;font-size:11px;flex-shrink:0}
+  .mat-board{margin:4px 0 10px 12px;border-left:2px solid #3a5070;padding-left:10px}
+  .mat-board-hdr{display:flex;align-items:baseline;gap:10px;
+                  padding:3px 0;font-family:sans-serif}
+  .mat-bnum{color:#666;font-size:11px;min-width:22px}
+  .mat-bsize{color:#99ccff;font-size:13px;font-weight:bold}
+  .mat-rem{margin-left:auto;color:#888;font-size:11px}
+  .mat-piece{display:flex;gap:14px;padding:1px 0 1px 4px;font-size:12px}
+  .mat-plen{color:#ffcc88;min-width:90px;flex-shrink:0}
+  .mat-pnote{color:#bbbbbb}
+</style></head><body>
+  <div id="toolbar">
+    <div id="tb-coupes">
+      <button class="btn" id="btnToggle" onclick="toggleHide()">Masquer cochés</button>
+      <button class="btn btn-warn" onclick="clearAll()">Tout décocher</button>
+      <span style="color:#888;font-family:sans-serif;font-size:11px;margin-left:4px">Exporter :</span>
+      <button class="btn" onclick="exportTxt()">Texte</button>
+      <button class="btn" onclick="exportCsv()">CSV</button>
+      <button class="btn" onclick="exportXls()">Excel</button>
+    </div>
+    <div class="tab-sep"></div>
+    <button class="btn btn-tab active" id="tabCoupes" onclick="switchTab('coupes')">&#9998; Coupes</button>
+    <button class="btn btn-tab" id="tabMat" onclick="switchTab('mat')">&#9744; Détails matériaux</button>
+  </div>
+  <div id="summary">Corps visibles : 164</div>
+
+  <div id="view-coupes">
+    <table><tbody>
+      <tr class="sec-hdr"><td colspan="4">1 1/2 in X 5 1/2 in<span class="sec-mat-sum">17&times;&#160;8 pi&#160;&#160;=&#160;&#160;17&#160;madriers</span></td></tr><tr class="col-hdr"><th></th><th>Qté</th><th>Longueur</th><th>Note</th></tr>
+<tr class="cut-row" data-gid="0" data-skey="1 1/2 in X 5 1/2 in|96.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">96 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="1" data-skey="1 1/2 in X 5 1/2 in|91.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">91 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="2" data-skey="1 1/2 in X 5 1/2 in|88.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">12</td><td class="len">88 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="3" data-skey="1 1/2 in X 5 1/2 in|48.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">48 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="4" data-skey="1 1/2 in X 5 1/2 in|43.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">43 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="5" data-skey="1 1/2 in X 5 1/2 in|14.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">10</td><td class="len">14 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="6" data-skey="1 1/2 in X 5 1/2 in|3.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">3 in</td><td class="note">Coupé droit</td></tr>
+<tr class="sec-hdr"><td colspan="4">1 1/2 in X 3 1/2 in<span class="sec-mat-sum">69&times;&#160;8 pi&#160;&#160;=&#160;&#160;69&#160;madriers</span></td></tr><tr class="col-hdr"><th></th><th>Qté</th><th>Longueur</th><th>Note</th></tr>
+<tr class="cut-row" data-gid="7" data-skey="1 1/2 in X 3 1/2 in|96.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">96 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="8" data-skey="1 1/2 in X 3 1/2 in|92.3125|Coupé à 7.5° aux 2 bouts — parallèles — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">92 5/16 in</td><td class="note">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="9" data-skey="1 1/2 in X 3 1/2 in|92.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">92 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="10" data-skey="1 1/2 in X 3 1/2 in|91.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">91 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="11" data-skey="1 1/2 in X 3 1/2 in|90.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">90 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="12" data-skey="1 1/2 in X 3 1/2 in|89.2500|Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">12</td><td class="len">89 1/4 in</td><td class="note">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</td></tr>
+<tr class="cut-row" data-gid="13" data-skey="1 1/2 in X 3 1/2 in|89.1250|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">89 1/8 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="14" data-skey="1 1/2 in X 3 1/2 in|89.1250|Coupé à 7.5° à un bout — sur arête 1.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">10</td><td class="len">89 1/8 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 1.5 in</td></tr>
+<tr class="cut-row" data-gid="15" data-skey="1 1/2 in X 3 1/2 in|88.7500|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">88 3/4 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="16" data-skey="1 1/2 in X 3 1/2 in|88.1250|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">88 1/8 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="17" data-skey="1 1/2 in X 3 1/2 in|88.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">88 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="18" data-skey="1 1/2 in X 3 1/2 in|82.4375|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">82 7/16 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="19" data-skey="1 1/2 in X 3 1/2 in|80.8750|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">80 7/8 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="20" data-skey="1 1/2 in X 3 1/2 in|80.3125|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">80 5/16 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="21" data-skey="1 1/2 in X 3 1/2 in|78.7500|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">4</td><td class="len">78 3/4 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="22" data-skey="1 1/2 in X 3 1/2 in|78.1875|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">78 3/16 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="23" data-skey="1 1/2 in X 3 1/2 in|77.6250|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">77 5/8 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="24" data-skey="1 1/2 in X 3 1/2 in|77.5000|Coupé à 7.5° à un bout — sur arête 1.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">9</td><td class="len">77 1/2 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 1.5 in</td></tr>
+<tr class="cut-row" data-gid="25" data-skey="1 1/2 in X 3 1/2 in|77.2500|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">77 1/4 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="26" data-skey="1 1/2 in X 3 1/2 in|54.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">54 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="27" data-skey="1 1/2 in X 3 1/2 in|48.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">3</td><td class="len">48 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="28" data-skey="1 1/2 in X 3 1/2 in|47.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">47 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="29" data-skey="1 1/2 in X 3 1/2 in|44.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">44 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="30" data-skey="1 1/2 in X 3 1/2 in|43.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">43 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="31" data-skey="1 1/2 in X 3 1/2 in|42.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">42 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="32" data-skey="1 1/2 in X 3 1/2 in|42.2500|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">42 1/4 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="33" data-skey="1 1/2 in X 3 1/2 in|42.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">42 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="34" data-skey="1 1/2 in X 3 1/2 in|41.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">41 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="35" data-skey="1 1/2 in X 3 1/2 in|36.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">3</td><td class="len">36 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="36" data-skey="1 1/2 in X 3 1/2 in|30.2500|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">30 1/4 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="37" data-skey="1 1/2 in X 3 1/2 in|14.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">25</td><td class="len">14 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="38" data-skey="1 1/2 in X 3 1/2 in|13.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">13 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="39" data-skey="1 1/2 in X 3 1/2 in|10.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">10 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="40" data-skey="1 1/2 in X 3 1/2 in|10.2500|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">10 1/4 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="41" data-skey="1 1/2 in X 3 1/2 in|6.5000|Coupé à 7.5° à un bout — sur arête 1.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">3</td><td class="len">6 1/2 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 1.5 in</td></tr>
+<tr class="cut-row" data-gid="42" data-skey="1 1/2 in X 3 1/2 in|4.3750|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">4 3/8 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="43" data-skey="1 1/2 in X 3 1/2 in|3.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">5</td><td class="len">3 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="44" data-skey="1 1/2 in X 3 1/2 in|2.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">1</td><td class="len">2 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="cut-row" data-gid="45" data-skey="1 1/2 in X 3 1/2 in|2.3125|Coupé à 7.5° à un bout — sur arête 3.5 in" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">2 5/16 in</td><td class="note">Coupé à 7.5° à un bout — sur arête 3.5 in</td></tr>
+<tr class="cut-row" data-gid="46" data-skey="1 1/2 in X 3 1/2 in|1.5000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">1 1/2 in</td><td class="note">Coupé droit</td></tr>
+<tr class="sec-hdr"><td colspan="4">1 1/4 in X 5 1/2 in<span class="sec-mat-sum">1&times;&#160;8 pi&#160;&#160;=&#160;&#160;1&#160;madrier</span></td></tr><tr class="col-hdr"><th></th><th>Qté</th><th>Longueur</th><th>Note</th></tr>
+<tr class="cut-row" data-gid="47" data-skey="1 1/4 in X 5 1/2 in|12.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">2</td><td class="len">12 in</td><td class="note">Coupé droit</td></tr>
+<tr class="sec-hdr"><td colspan="4">1 1/4 in X 3 1/2 in<span class="sec-mat-sum">1&times;&#160;8 pi&#160;&#160;=&#160;&#160;1&#160;madrier</span></td></tr><tr class="col-hdr"><th></th><th>Qté</th><th>Longueur</th><th>Note</th></tr>
+<tr class="cut-row" data-gid="48" data-skey="1 1/4 in X 3 1/2 in|12.0000|Coupé droit" onclick="rowClick(event,this)"><td class="cb-cell"><input type="checkbox" onclick="event.stopPropagation()" onchange="cbChange(this)"></td><td class="qty">6</td><td class="len">12 in</td><td class="note">Coupé droit</td></tr>
+    </tbody></table>
+  </div>
+
+  <div id="view-mat" style="display:none">
+    <div class="mat-sec-hdr" onclick="toggleMatSec(this)"><span>1 1/2 in X 5 1/2 in</span><span class="mat-sec-count">(Madriers&#160;: 17&times;&#160;8 pi)</span><span class="mat-sec-arrow">&#9654;</span></div><div class="mat-sec-body" style="display:none">
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#1</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">96 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#2</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 2 in</span></div><div class="mat-piece"><span class="mat-plen">91 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">3 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#3</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#4</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#5</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#6</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#7</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#8</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#9</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#10</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#11</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#12</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#13</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#14</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#15</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">48 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">43 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#16</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 9 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#17</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 38 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+</div>
+<div class="mat-sec-hdr" onclick="toggleMatSec(this)"><span>1 1/2 in X 3 1/2 in</span><span class="mat-sec-count">(Madriers&#160;: 69&times;&#160;8 pi)</span><span class="mat-sec-arrow">&#9654;</span></div><div class="mat-sec-body" style="display:none">
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#1</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">96 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#2</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 11/16 in</span></div><div class="mat-piece"><span class="mat-plen">92 5/16 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">3 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#3</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 11/16 in</span></div><div class="mat-piece"><span class="mat-plen">92 5/16 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">3 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#4</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1 in</span></div><div class="mat-piece"><span class="mat-plen">92 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">3 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#5</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 5/8 in</span></div><div class="mat-piece"><span class="mat-plen">91 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">4 3/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#6</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 5/8 in</span></div><div class="mat-piece"><span class="mat-plen">91 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">4 3/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#7</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">90 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">3 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">3 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#8</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">6 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#9</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">6 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#10</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">6 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#11</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7/16 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">2 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">2 5/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">1 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#12</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 2 15/16 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">2 5/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">1 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#13</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#14</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#15</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#16</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#17</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#18</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#19</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/4 in</span><span class="mat-pnote">Coupé à 7.5° aux 2 bouts — parallèles — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#20</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#21</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#22</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#23</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#24</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#25</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#26</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#27</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#28</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#29</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#30</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#31</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 6 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">89 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#32</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">88 3/4 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#33</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">88 3/4 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#34</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#35</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 7 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">88 1/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#36</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 8 in</span></div><div class="mat-piece"><span class="mat-plen">88 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#37</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 9/16 in</span></div><div class="mat-piece"><span class="mat-plen">82 7/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">13 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#38</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 5/8 in</span></div><div class="mat-piece"><span class="mat-plen">80 7/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#39</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1 3/16 in</span></div><div class="mat-piece"><span class="mat-plen">80 5/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#40</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1 3/16 in</span></div><div class="mat-piece"><span class="mat-plen">80 5/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#41</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 2 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">78 3/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#42</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 2 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">78 3/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#43</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 2 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">78 3/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#44</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 2 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">78 3/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#45</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 3 5/16 in</span></div><div class="mat-piece"><span class="mat-plen">78 3/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#46</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 3 5/16 in</span></div><div class="mat-piece"><span class="mat-plen">78 3/16 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#47</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 3 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">77 5/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#48</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 3 7/8 in</span></div><div class="mat-piece"><span class="mat-plen">77 5/8 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#49</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#50</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#51</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#52</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#53</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#54</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#55</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#56</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#57</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/2 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 1.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#58</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/4 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#59</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 4 1/4 in</span></div><div class="mat-piece"><span class="mat-plen">77 1/4 in</span><span class="mat-pnote">Coupé à 7.5° à un bout — sur arête 3.5 in</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#60</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">54 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">42 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#61</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">54 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">42 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#62</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">48 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">48 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#63</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">48 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">47 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#64</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 8 in</span></div><div class="mat-piece"><span class="mat-plen">44 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">43 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#65</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">42 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">42 1/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">10 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#66</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: &#8212;</span></div><div class="mat-piece"><span class="mat-plen">41 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">41 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">13 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#67</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 9 1/2 in</span></div><div class="mat-piece"><span class="mat-plen">36 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">36 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#68</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 3/4 in</span></div><div class="mat-piece"><span class="mat-plen">36 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">30 1/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">14 1/2 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#69</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 65 in</span></div><div class="mat-piece"><span class="mat-plen">10 1/2 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">10 1/4 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">10 1/4 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+</div>
+<div class="mat-sec-hdr" onclick="toggleMatSec(this)"><span>1 1/4 in X 5 1/2 in</span><span class="mat-sec-count">(Madriers&#160;: 1&times;&#160;8 pi)</span><span class="mat-sec-arrow">&#9654;</span></div><div class="mat-sec-body" style="display:none">
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#1</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 72 in</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+</div>
+<div class="mat-sec-hdr" onclick="toggleMatSec(this)"><span>1 1/4 in X 3 1/2 in</span><span class="mat-sec-count">(Madriers&#160;: 1&times;&#160;8 pi)</span><span class="mat-sec-arrow">&#9654;</span></div><div class="mat-sec-body" style="display:none">
+<div class="mat-board"><div class="mat-board-hdr"><span class="mat-bnum">#1</span><span class="mat-bsize">Madrier 8 pi</span><span class="mat-rem">retaille&#160;: 24 in</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div><div class="mat-piece"><span class="mat-plen">12 in</span><span class="mat-pnote">Coupé droit</span></div></div>
+</div>
+  </div>
+
+<script>
+let hiding = false;
+
+function toggleMatSec(hdr) {
+  const body = hdr.nextElementSibling;
+  const arrow = hdr.querySelector('.mat-sec-arrow');
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  arrow.innerHTML = isOpen ? '&#9654;' : '&#9660;';
+}
+
+window.fusionJavaScriptHandler = {
+  handle: function(action, data) {
+    if (action === 'selectRow') {
+      const gid = String(data).trim();
+      document.querySelectorAll('.cut-row.active').forEach(r => r.classList.remove('active'));
+      const target = document.querySelector('.cut-row[data-gid="' + gid + '"]');
+      if (target) {
+        target.classList.add('active');
+        target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+    return 'ok';
+  }
+};
+
+document.querySelectorAll('.cut-row').forEach(row => {
+  if (localStorage.getItem('lc_' + row.dataset.skey) === '1') {
+    row.querySelector('input').checked = true;
+    row.classList.add('done');
+  }
+});
+
+function switchTab(tab) {
+  const isCoupes = tab === 'coupes';
+  document.getElementById('view-coupes').style.display = isCoupes ? '' : 'none';
+  document.getElementById('view-mat').style.display    = isCoupes ? 'none' : '';
+  document.getElementById('tb-coupes').style.display   = isCoupes ? '' : 'none';
+  document.getElementById('tabCoupes').classList.toggle('active', isCoupes);
+  document.getElementById('tabMat').classList.toggle('active', !isCoupes);
+}
+
+function rowClick(e, row) {
+  document.querySelectorAll('.cut-row.active').forEach(r => r.classList.remove('active'));
+  row.classList.add('active');
+  const gid = row.dataset.gid;
+  if (typeof adsk !== 'undefined' && adsk.fusionSendData) {
+    try { adsk.fusionSendData('highlight', gid); } catch(err) {}
+  }
+}
+
+function cbChange(cb) {
+  const row = cb.closest('tr');
+  const key = 'lc_' + row.dataset.skey;
+  if (cb.checked) {
+    localStorage.setItem(key, '1');
+    row.classList.add('done');
+    if (hiding) row.classList.add('hidden-row');
+  } else {
+    localStorage.removeItem(key);
+    row.classList.remove('done', 'hidden-row');
+  }
+}
+
+function toggleHide() {
+  hiding = !hiding;
+  document.querySelectorAll('.cut-row.done').forEach(r =>
+    r.classList.toggle('hidden-row', hiding));
+  document.getElementById('btnToggle').textContent =
+    hiding ? 'Afficher cochés' : 'Masquer cochés';
+}
+
+function clearAll() {
+  hiding = false;
+  document.getElementById('btnToggle').textContent = 'Masquer cochés';
+  document.querySelectorAll('.cut-row').forEach(row => {
+    row.querySelector('input').checked = false;
+    localStorage.removeItem('lc_' + row.dataset.skey);
+    row.classList.remove('done', 'hidden-row', 'active');
+  });
+}
+
+function getExportRows() {
+  const out = [];
+  let section = '';
+  document.querySelectorAll('table tbody tr').forEach(tr => {
+    if (tr.classList.contains('sec-hdr')) {
+      const td = tr.cells[0];
+      const sumEl = td.querySelector('.sec-mat-sum');
+      const sumRaw = sumEl ? sumEl.textContent.replace(/ /g, ' ').trim() : '';
+      const sumText = sumRaw.replace(/\s*=\s*\d+\s*madriers?\s*$/i, '').trim();
+      const titleText = sumEl
+        ? td.textContent.replace(sumEl.textContent, '').trim()
+        : td.textContent.trim();
+      section = sumText ? titleText + ' (Madriers: ' + sumText + ')' : titleText;
+    } else if (tr.classList.contains('cut-row')) {
+      out.push({
+        section: section,
+        qty: tr.querySelector('.qty').textContent.trim(),
+        len: tr.querySelector('.len').textContent.trim(),
+        note: tr.querySelector('.note').textContent.trim()
+      });
+    }
+  });
+  return out;
+}
+
+function exportFilename(ext) {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return 'liste_coupe_' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+    + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.' + ext;
+}
+
+function downloadBlob(filename, mime, parts) {
+  const blob = new Blob(parts, { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function csvCell(s) {
+  const t = String(s);
+  if (/[;\r\n"]/.test(t)) return '"' + t.replace(/"/g,'""') + '"';
+  return t;
+}
+
+function sendExport(fmt, content) {
+  if (typeof adsk !== 'undefined' && adsk.fusionSendData) {
+    adsk.fusionSendData('export', JSON.stringify({format: fmt, content: content}));
+  }
+}
+
+function exportTxt() {
+  const rows = getExportRows();
+  let cur = null;
+  const lines = [];
+  rows.forEach(r => {
+    if (r.section !== cur) {
+      if (cur !== null) lines.push('');
+      lines.push(r.section);
+      cur = r.section;
+    }
+    lines.push('  ' + r.qty.padStart(4, ' ') + '  ' + r.len.padEnd(14, ' ') + '  ' + r.note);
+  });
+  sendExport('txt', lines.join(String.fromCharCode(10)));
+}
+
+function exportCsv() {
+  const rows = getExportRows();
+  const CRLF = String.fromCharCode(13) + String.fromCharCode(10);
+  const lines = ['Section;Qté;Longueur;Note'];
+  let curSection = null;
+  rows.forEach(r => {
+    if (r.section !== curSection) {
+      if (curSection !== null) lines.push(';;;');
+      lines.push([csvCell(r.section), csvCell(r.qty), csvCell(r.len), csvCell(r.note)].join(';'));
+      curSection = r.section;
+    } else {
+      lines.push(['' , csvCell(r.qty), csvCell(r.len), csvCell(r.note)].join(';'));
+    }
+  });
+  sendExport('csv', lines.join(CRLF));
+}
+
+function exportXls() {
+  const rows = getExportRows();
+  let h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+    + 'xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">'
+    + '<style>table{border-collapse:collapse;font-family:Calibri,sans-serif}'
+    + 'td,th{border:1px solid #ccc;padding:4px}'
+    + 'th{background:#dde4f0;font-weight:bold}'
+    + '.sec-title{background:#f5f0e8;font-weight:bold;color:#7a5000}'
+    + '.sep{border:none}'
+    + '</style></head><body><table>';
+  h += '<tr><th>Section</th><th>Qté</th><th>Longueur</th><th>Note</th></tr>';
+  let curSection = null;
+  rows.forEach(r => {
+    if (r.section !== curSection) {
+      if (curSection !== null)
+        h += '<tr class="sep"><td colspan="4" style="border:none;padding:4px 0"></td></tr>';
+      h += '<tr><td class="sec-title">' + escapeHtml(r.section) + '</td><td>' + escapeHtml(r.qty)
+        + '</td><td>' + escapeHtml(r.len) + '</td><td>' + escapeHtml(r.note) + '</td></tr>';
+      curSection = r.section;
+    } else {
+      h += '<tr><td></td><td>' + escapeHtml(r.qty)
+        + '</td><td>' + escapeHtml(r.len) + '</td><td>' + escapeHtml(r.note) + '</td></tr>';
+    }
+  });
+  h += '</table></body></html>';
+  sendExport('xls', h);
+}
+</script>
+</body></html>
