@@ -129,29 +129,107 @@ def _handle_export(data_json):
         pass
 
 
-def _handle_copy(text):
-    """Copie le texte dans le presse-papiers via l'utilitaire système
-    (pbcopy sur Mac, clip sur Windows) et renvoie le résultat à la palette.
-    Chemin principal dans Fusion : navigator.clipboard ne répond pas dans CEF."""
-    import sys
+def _copy_mac(text, rtf):
+    """Place le texte brut et le RTF sur le presse-papiers via osascript."""
     import subprocess
+    import tempfile
+
+    def _as_str(v):
+        return v.replace('\\', '\\\\').replace('"', '\\"')
+
+    script = 'set the clipboard to {string:"' + _as_str(text) + '"'
+    if rtf:
+        script += ', \u00abclass RTF \u00bb:\u00abdata RTF ' + rtf.encode('utf-8').hex().upper() + '\u00bb'
+    script += '}\n'
+    fd, path = tempfile.mkstemp(suffix='.applescript')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(script)
+        proc = subprocess.run(['osascript', path], timeout=10,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return proc.returncode == 0
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def _copy_win(text, rtf):
+    """Place le texte brut et le RTF sur le presse-papiers via PowerShell (STA)."""
+    import subprocess
+    import tempfile
+
+    no_window = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    txt_path = rtf_path = ps_path = None
+    try:
+        fd, txt_path = tempfile.mkstemp(suffix='.txt')
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(text)
+        if rtf:
+            fd, rtf_path = tempfile.mkstemp(suffix='.rtf')
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                f.write(rtf)
+        ps = (
+            'Add-Type -AssemblyName System.Windows.Forms\n'
+            '$d = New-Object System.Windows.Forms.DataObject\n'
+            '$t = [IO.File]::ReadAllText("' + txt_path.replace('\\', '\\\\') + '", [Text.Encoding]::UTF8)\n'
+            '$d.SetData([System.Windows.Forms.DataFormats]::UnicodeText, $t)\n'
+        )
+        if rtf_path:
+            ps += (
+                '$r = [IO.File]::ReadAllText("' + rtf_path.replace('\\', '\\\\') + '", [Text.Encoding]::UTF8)\n'
+                '$d.SetData([System.Windows.Forms.DataFormats]::Rtf, $r)\n'
+            )
+        ps += '[System.Windows.Forms.Clipboard]::SetDataObject($d, $true)\n'
+        fd, ps_path = tempfile.mkstemp(suffix='.ps1')
+        with os.fdopen(fd, 'w', encoding='utf-8-sig') as f:
+            f.write(ps)
+        proc = subprocess.run(
+            ['powershell', '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', ps_path],
+            timeout=15, creationflags=no_window,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if proc.returncode == 0:
+            return True
+        # Repli : texte brut seulement
+        proc = subprocess.run(['clip'], input=text.encode('utf-16-le'),
+                              timeout=5, creationflags=no_window)
+        return proc.returncode == 0
+    finally:
+        for pth in (txt_path, rtf_path, ps_path):
+            if pth:
+                try:
+                    os.unlink(pth)
+                except OSError:
+                    pass
+
+
+def _handle_copy(data):
+    """Copie la liste dans le presse-papiers (texte brut + RTF si possible) et
+    renvoie le résultat à la palette. Chemin principal dans Fusion :
+    navigator.clipboard ne répond pas dans CEF.
+
+    data : JSON {"text": ..., "rtf": ...} envoyé par la palette, ou texte brut.
+    """
+    import sys
+    import json
+    text, rtf = '', ''
+    try:
+        payload = json.loads(data)
+        if isinstance(payload, dict):
+            text = str(payload.get('text', ''))
+            rtf  = str(payload.get('rtf', ''))
+        else:
+            text = str(data)
+    except Exception:
+        text = str(data)
+
     ok = False
     try:
         if sys.platform == 'darwin':
-            cmd = ['pbcopy']
+            ok = _copy_mac(text, rtf)
         elif sys.platform.startswith('win'):
-            cmd = ['clip']
-        else:
-            cmd = None
-        if cmd:
-            kwargs = {}
-            if sys.platform.startswith('win'):
-                kwargs['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-                data = text.encode('utf-16-le')   # clip.exe attend de l'UTF-16 pour les accents
-            else:
-                data = text.encode('utf-8')
-            proc = subprocess.run(cmd, input=data, timeout=5, **kwargs)
-            ok = (proc.returncode == 0)
+            ok = _copy_win(text, rtf)
     except Exception:
         ok = False
     try:
@@ -922,10 +1000,12 @@ function sendExport(fmt, content) {{
   }}
 }}
 
+const LIST_TITLE = 'Liste de coupe:';
+
 function buildTxt() {{
   const rows = getExportRows();
   let cur = null;
-  const lines = [];
+  const lines = [LIST_TITLE, ''];
   rows.forEach(r => {{
     if (r.section !== cur) {{
       if (cur !== null) lines.push('');
@@ -939,6 +1019,41 @@ function buildTxt() {{
 
 function exportTxt() {{
   sendExport('txt', buildTxt());
+}}
+
+// Échappe une chaîne pour RTF : barre oblique inverse, accolades, et caractères
+// non ASCII en séquences unicode RTF. BS = barre oblique inverse (évite les
+// niveaux d'échappement Python/f-string).
+const BS = String.fromCharCode(92);
+function rtfEsc(s) {{
+  let out = '';
+  for (const ch of String(s)) {{
+    const c = ch.codePointAt(0);
+    if (ch === BS || ch === '{{' || ch === '}}') out += BS + ch;
+    else if (c < 128) out += ch;
+    else if (c < 65536) out += BS + 'u' + (c > 32767 ? c - 65536 : c) + '?';
+    else out += '?';
+  }}
+  return out;
+}}
+
+// Même contenu que buildTxt(), en RTF : titre gras souligné, sections en gras.
+function buildRtf() {{
+  const rows = getExportRows();
+  const ctl = (...names) => names.map(n => BS + n).join('');
+  const PAR = ctl('par') + String.fromCharCode(10);
+  let out = '{{' + ctl('rtf1', 'ansi', 'deff0') + '{{' + ctl('fonttbl') + '{{' + ctl('f0', 'fmodern') + ' Courier New;}}}}' + String.fromCharCode(10)
+    + ctl('f0', 'fs20') + ' {{' + ctl('b', 'ul') + ' ' + rtfEsc(LIST_TITLE) + '}}' + PAR + PAR;
+  let cur = null;
+  rows.forEach(r => {{
+    if (r.section !== cur) {{
+      if (cur !== null) out += PAR;
+      out += '{{' + ctl('b') + ' ' + rtfEsc(r.section) + '}}' + PAR;
+      cur = r.section;
+    }}
+    out += rtfEsc('  ' + r.qty.padStart(4, ' ') + '  ' + r.len.padEnd(14, ' ') + '  ' + r.note) + PAR;
+  }});
+  return out + '}}';
 }}
 
 let copyFeedbackTimer = null;
@@ -971,6 +1086,7 @@ function copyViaTextarea(text) {{
 let copyPendingTimer = null;
 function copyList() {{
   const text = buildTxt();
+  const payload = JSON.stringify({{ text: text, rtf: buildRtf() }});
   if (typeof adsk !== 'undefined' && adsk.fusionSendData) {{
     // Dans la palette Fusion (CEF), navigator.clipboard ne répond jamais :
     // on passe par Python, qui renvoie 'copyResult'. Sans réponse → échec.
@@ -979,7 +1095,7 @@ function copyList() {{
     clearTimeout(copyPendingTimer);
     copyPendingTimer = setTimeout(() => showCopyFeedback(false), 3000);
     try {{
-      adsk.fusionSendData('copy', text);
+      adsk.fusionSendData('copy', payload);
     }} catch (err) {{
       clearTimeout(copyPendingTimer);
       showCopyFeedback(copyViaTextarea(text));
