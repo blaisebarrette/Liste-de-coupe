@@ -130,9 +130,9 @@ def _handle_export(data_json):
 
 
 def _handle_copy(text):
-    """Repli quand le presse-papiers n'est pas accessible depuis la palette :
-    copie via l'utilitaire système (pbcopy sur Mac, clip sur Windows) et
-    renvoie le résultat à la palette."""
+    """Copie le texte dans le presse-papiers via l'utilitaire système
+    (pbcopy sur Mac, clip sur Windows) et renvoie le résultat à la palette.
+    Chemin principal dans Fusion : navigator.clipboard ne répond pas dans CEF."""
     import sys
     import subprocess
     ok = False
@@ -144,7 +144,13 @@ def _handle_copy(text):
         else:
             cmd = None
         if cmd:
-            proc = subprocess.run(cmd, input=text.encode('utf-8'), timeout=5)
+            kwargs = {}
+            if sys.platform.startswith('win'):
+                kwargs['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+                data = text.encode('utf-16-le')   # clip.exe attend de l'UTF-16 pour les accents
+            else:
+                data = text.encode('utf-8')
+            proc = subprocess.run(cmd, input=data, timeout=5, **kwargs)
             ok = (proc.returncode == 0)
     except Exception:
         ok = False
@@ -796,6 +802,7 @@ window.fusionJavaScriptHandler = {{
         target.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
       }}
     }} else if (action === 'copyResult') {{
+      clearTimeout(copyPendingTimer);
       showCopyFeedback(String(data).trim() === 'ok');
     }}
     return 'ok';
@@ -961,23 +968,33 @@ function copyViaTextarea(text) {{
   return ok;
 }}
 
+let copyPendingTimer = null;
 function copyList() {{
   const text = buildTxt();
-  const fallback = () => {{
-    if (copyViaTextarea(text)) {{
-      showCopyFeedback(true);
-    }} else if (typeof adsk !== 'undefined' && adsk.fusionSendData) {{
-      adsk.fusionSendData('copy', text);   // Python répond par 'copyResult'
-    }} else {{
-      showCopyFeedback(false);
+  if (typeof adsk !== 'undefined' && adsk.fusionSendData) {{
+    // Dans la palette Fusion (CEF), navigator.clipboard ne répond jamais :
+    // on passe par Python, qui renvoie 'copyResult'. Sans réponse → échec.
+    const btn = document.getElementById('btnCopy');
+    if (btn) btn.textContent = 'Copie\u2026';
+    clearTimeout(copyPendingTimer);
+    copyPendingTimer = setTimeout(() => showCopyFeedback(false), 3000);
+    try {{
+      adsk.fusionSendData('copy', text);
+    }} catch (err) {{
+      clearTimeout(copyPendingTimer);
+      showCopyFeedback(copyViaTextarea(text));
     }}
-  }};
-  if (navigator.clipboard && navigator.clipboard.writeText) {{
+    return;
+  }}
+  // Hors Fusion (navigateur ordinaire)
+  if (copyViaTextarea(text)) {{
+    showCopyFeedback(true);
+  }} else if (navigator.clipboard && navigator.clipboard.writeText) {{
     navigator.clipboard.writeText(text)
       .then(() => showCopyFeedback(true))
-      .catch(fallback);
+      .catch(() => showCopyFeedback(false));
   }} else {{
-    fallback();
+    showCopyFeedback(false);
   }}
 }}
 
