@@ -62,6 +62,8 @@ class _IncomingHandler(adsk.core.HTMLEventHandler):
                     _ignore_selection_change = False
             elif ea.action == 'export':
                 _handle_export(ea.data or '')
+            elif ea.action == 'copy':
+                _handle_copy(ea.data or '')
         except Exception:
             pass
 
@@ -123,6 +125,32 @@ def _handle_export(data_json):
                 path += '.' + fmt
             with open(path, 'w', encoding='utf-8-sig') as f:
                 f.write(content)
+    except Exception:
+        pass
+
+
+def _handle_copy(text):
+    """Repli quand le presse-papiers n'est pas accessible depuis la palette :
+    copie via l'utilitaire système (pbcopy sur Mac, clip sur Windows) et
+    renvoie le résultat à la palette."""
+    import sys
+    import subprocess
+    ok = False
+    try:
+        if sys.platform == 'darwin':
+            cmd = ['pbcopy']
+        elif sys.platform.startswith('win'):
+            cmd = ['clip']
+        else:
+            cmd = None
+        if cmd:
+            proc = subprocess.run(cmd, input=text.encode('utf-8'), timeout=5)
+            ok = (proc.returncode == 0)
+    except Exception:
+        ok = False
+    try:
+        if _palette_ref and _palette_ref.isValid:
+            _palette_ref.sendInfoToHTML('copyResult', 'ok' if ok else 'fail')
     except Exception:
         pass
 
@@ -675,6 +703,7 @@ def _build_html(body_count, sections_ordered):
   .btn{{background:#3a7bd5;color:#fff;border:none;padding:5px 14px;
         font-size:12px;border-radius:4px;cursor:pointer;font-family:sans-serif}}
   .btn:hover{{background:#2a6bc5}}
+  .btn.copied{{background:#2e8b57}}
   .btn-warn{{background:#8b2020}}
   .btn-warn:hover{{background:#b02828}}
   .btn-tab{{background:#3a3a3a;color:#bbb}}
@@ -727,6 +756,7 @@ def _build_html(body_count, sections_ordered):
       <button class="btn" onclick="exportTxt()">Texte</button>
       <button class="btn" onclick="exportCsv()">CSV</button>
       <button class="btn" onclick="exportXls()">Excel</button>
+      <button class="btn" id="btnCopy" onclick="copyList()">Copier</button>
     </div>
     <div class="tab-sep"></div>
     <button class="btn btn-tab active" id="tabCoupes" onclick="switchTab('coupes')">&#9998; Coupes</button>
@@ -765,6 +795,8 @@ window.fusionJavaScriptHandler = {{
         target.classList.add('active');
         target.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
       }}
+    }} else if (action === 'copyResult') {{
+      showCopyFeedback(String(data).trim() === 'ok');
     }}
     return 'ok';
   }}
@@ -883,7 +915,7 @@ function sendExport(fmt, content) {{
   }}
 }}
 
-function exportTxt() {{
+function buildTxt() {{
   const rows = getExportRows();
   let cur = null;
   const lines = [];
@@ -895,7 +927,58 @@ function exportTxt() {{
     }}
     lines.push('  ' + r.qty.padStart(4, ' ') + '  ' + r.len.padEnd(14, ' ') + '  ' + r.note);
   }});
-  sendExport('txt', lines.join(String.fromCharCode(10)));
+  return lines.join(String.fromCharCode(10));
+}}
+
+function exportTxt() {{
+  sendExport('txt', buildTxt());
+}}
+
+let copyFeedbackTimer = null;
+function showCopyFeedback(ok) {{
+  const btn = document.getElementById('btnCopy');
+  if (!btn) return;
+  btn.textContent = ok ? 'Copié \u2713' : 'Échec copie';
+  btn.classList.toggle('copied', ok);
+  clearTimeout(copyFeedbackTimer);
+  copyFeedbackTimer = setTimeout(() => {{
+    btn.textContent = 'Copier';
+    btn.classList.remove('copied');
+  }}, 1500);
+}}
+
+function copyViaTextarea(text) {{
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {{ ok = document.execCommand('copy'); }} catch (err) {{ ok = false; }}
+  document.body.removeChild(ta);
+  return ok;
+}}
+
+function copyList() {{
+  const text = buildTxt();
+  const fallback = () => {{
+    if (copyViaTextarea(text)) {{
+      showCopyFeedback(true);
+    }} else if (typeof adsk !== 'undefined' && adsk.fusionSendData) {{
+      adsk.fusionSendData('copy', text);   // Python répond par 'copyResult'
+    }} else {{
+      showCopyFeedback(false);
+    }}
+  }};
+  if (navigator.clipboard && navigator.clipboard.writeText) {{
+    navigator.clipboard.writeText(text)
+      .then(() => showCopyFeedback(true))
+      .catch(fallback);
+  }} else {{
+    fallback();
+  }}
 }}
 
 function exportCsv() {{
